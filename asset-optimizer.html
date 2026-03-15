@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asset Optimizer — Project Asset Optimizer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0a0f; --bg2:#111118; --bg3:#181820;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text:#f0f0f8; --text2:#9090a8; --text3:#55556a;
+  --accent:#7c6af7; --accent2:#a594ff;
+  --green:#2dd98a; --green-bg:rgba(45,217,138,0.08);
+  --yellow:#f5c842; --yellow-bg:rgba(245,200,66,0.08);
+  --red:#f25c5c; --red-bg:rgba(242,92,92,0.08);
+  --blue:#4ea8f7; --blue-bg:rgba(78,168,247,0.1);
+  --pink:#f472b6;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:15px;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:400;line-height:1.6;min-height:100vh;}
+
+/* HEADER */
+.header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-icon{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#b794f4);display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-family:'Arial',sans-serif;font-weight:800;font-size:1.25rem;letter-spacing:-0.02em;}
+.logo-sub{font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.version{font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--text3);background:var(--bg3);border:1px solid var(--border);padding:3px 9px;border-radius:99px;}
+.guide-btn{font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--accent2);background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.25);padding:3px 10px;border-radius:99px;cursor:pointer;transition:background 0.15s;}
+.guide-btn:hover{background:rgba(124,106,247,0.2);}
+
+/* LAYOUT */
+.main{display:grid;grid-template-columns:355px 1fr;min-height:calc(100vh - 64px);}
+.sidebar{border-right:1px solid var(--border);padding:1.1rem;display:flex;flex-direction:column;gap:1rem;overflow-y:auto;}
+.panel{flex:1;padding:1.5rem;overflow-y:auto;}
+
+/* MODE TABS */
+.mode-tabs{display:flex;background:var(--bg3);border-radius:9px;padding:3px;gap:2px;}
+.mode-tab{flex:1;text-align:center;padding:7px 4px;border-radius:7px;font-size:0.72rem;font-weight:500;cursor:pointer;color:var(--text3);transition:all 0.15s;font-family:'DM Sans',sans-serif;border:none;background:transparent;white-space:nowrap;}
+.mode-tab.active{background:var(--bg2);color:var(--text);border:1px solid var(--border2);}
+.mode-tab:hover:not(.active){color:var(--text2);}
+
+/* SECTION HEADERS */
+.sec-head{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:0.6rem;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.6rem;}
+.sec-head::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* UPLOAD ZONE */
+.upload-zone{border:1.5px dashed var(--border2);border-radius:11px;padding:1.4rem 1rem;text-align:center;cursor:pointer;background:var(--bg2);transition:all 0.2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(124,106,247,0.06);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.uz-icon{font-size:1.6rem;margin-bottom:4px;}
+.uz-title{font-family:'Syne',sans-serif;font-weight:600;font-size:0.85rem;margin-bottom:3px;}
+.uz-sub{font-size:0.7rem;color:var(--text3);line-height:1.5;}
+
+/* SETTINGS */
+.settings-block{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:0.85rem;display:flex;flex-direction:column;gap:0.75rem;}
+.setting-row{display:flex;flex-direction:column;gap:4px;}
+.setting-label{font-size:0.68rem;color:var(--text2);font-family:'DM Mono',monospace;display:flex;justify-content:space-between;}
+.setting-label span{color:var(--accent2);}
+select{background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:6px 9px;font-size:0.77rem;font-family:'DM Sans',sans-serif;width:100%;cursor:pointer;appearance:none;}
+select:focus{outline:none;border-color:var(--accent);}
+input[type=range]{width:100%;height:4px;border-radius:99px;background:var(--bg3);cursor:pointer;appearance:none;}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent2);cursor:pointer;box-shadow:0 0 0 3px rgba(165,148,255,0.2);}
+.slider-track{display:flex;align-items:center;gap:10px;}
+.slider-track input{flex:1;}
+.slider-val{font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--accent2);min-width:28px;text-align:right;}
+
+/* BUTTONS */
+.run-btn{padding:10px 0;background:linear-gradient(135deg,var(--accent),#b794f4);border:none;border-radius:9px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.86rem;cursor:pointer;width:100%;letter-spacing:0.02em;transition:opacity 0.15s,transform 0.1s;}
+.run-btn:hover:not(:disabled){opacity:0.9;transform:translateY(-1px);}
+.run-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.dl-btn{background:linear-gradient(135deg,var(--accent),#b794f4);border:none;color:#fff;padding:10px 0;font-size:0.84rem;border-radius:9px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity 0.15s;}
+.dl-btn:hover:not(:disabled){opacity:0.88;}
+.dl-btn:disabled{opacity:0.35;cursor:not-allowed;}
+.single-dl-btn{width:100%;padding:10px 0;margin-top:8px;background:var(--green-bg);border:1px solid rgba(45,217,138,0.3);color:var(--green);font-family:'Syne',sans-serif;font-weight:700;font-size:0.83rem;border-radius:9px;cursor:pointer;display:none;align-items:center;justify-content:center;gap:8px;transition:background 0.15s;}
+.single-dl-btn:hover{background:rgba(45,217,138,0.14);}
+
+/* PROGRESS */
+.progress-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:0.85rem;}
+.progress-bar-outer{height:5px;background:var(--bg3);border-radius:99px;overflow:hidden;margin:7px 0 5px;}
+.progress-bar-inner{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width 0.3s;}
+.progress-label{font-size:0.78rem;font-weight:500;}
+.progress-text{font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--text2);}
+
+/* METRICS */
+.metrics-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:0.7rem;}
+.metric-val{font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;}
+.metric-val.green{color:var(--green);}
+.metric-lbl{font-size:0.63rem;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;}
+
+/* RESULT TABS */
+.tabs{display:flex;gap:4px;margin-bottom:1.2rem;}
+.tab{padding:5px 13px;border-radius:7px;font-size:0.75rem;font-weight:500;cursor:pointer;border:1px solid transparent;background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;transition:all 0.15s;}
+.tab:hover{color:var(--text);background:var(--bg3);}
+.tab.active{background:var(--bg3);border-color:var(--border2);color:var(--text);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* ASSET TABLE */
+.asset-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.asset-table thead tr{border-bottom:1px solid var(--border);}
+.asset-table th{text-align:left;padding:7px 10px;font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:0.05em;}
+.asset-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.asset-table tr:hover td{background:var(--bg2);}
+.asset-table tr:last-child td{border-bottom:none;}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:99px;font-size:0.64rem;font-family:'DM Mono',monospace;font-weight:500;}
+.badge-img{background:var(--blue-bg);color:var(--blue);}
+.badge-vid{background:rgba(244,114,182,0.1);color:var(--pink);}
+.badge-other{background:var(--bg3);color:var(--text3);}
+.badge-used{background:var(--green-bg);color:var(--green);}
+.badge-unused{background:var(--red-bg);color:var(--red);}
+.save-chip{font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--green);background:var(--green-bg);padding:2px 7px;border-radius:99px;white-space:nowrap;}
+.save-chip.warn{color:var(--yellow);background:var(--yellow-bg);}
+.save-chip.none{color:var(--text3);background:var(--bg3);}
+
+/* PATH CODE */
+.path-code{font-family:'DM Mono',monospace;font-size:0.69rem;color:var(--text2);word-break:break-all;}
+.path-code .fn{color:var(--text);font-weight:500;}
+
+/* FILE TREE */
+.tree{font-family:'DM Mono',monospace;font-size:0.73rem;line-height:2;}
+.tree-folder{color:var(--yellow);}
+.tree-file{color:var(--text2);}
+.tree-file.is-asset{color:var(--accent2);}
+.tree-file.is-asset.unused{color:var(--text3);text-decoration:line-through;}
+.tree-indent{margin-left:16px;border-left:1px solid var(--border);padding-left:9px;}
+.tree-dot{color:var(--text3);margin-right:4px;}
+
+/* CODE REFS */
+.ref-block{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:0.9rem;margin-bottom:9px;}
+.ref-asset-name{font-family:'Syne',sans-serif;font-weight:600;font-size:0.82rem;margin-bottom:5px;}
+.ref-path{font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--accent2);margin-bottom:7px;}
+.ref-list{display:flex;flex-direction:column;gap:4px;}
+.ref-item{font-family:'DM Mono',monospace;font-size:0.69rem;color:var(--text2);background:var(--bg3);padding:5px 9px;border-radius:5px;display:flex;gap:10px;}
+.ref-item .ref-src{color:var(--text3);min-width:150px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+.ref-item .ref-ln{color:var(--green);flex-shrink:0;}
+
+/* SINGLE FILE RESULT */
+.single-result{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:0.9rem;margin-top:9px;display:none;}
+.sr-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);}
+.sr-row:last-child{border-bottom:none;}
+.sr-label{color:var(--text2);font-family:'DM Mono',monospace;font-size:0.68rem;}
+.sr-val{font-weight:500;font-size:0.8rem;}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:3.5rem 2rem;}
+.empty-icon{font-size:2.5rem;margin-bottom:0.9rem;opacity:0.28;}
+.empty-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--text2);margin-bottom:6px;}
+.empty-sub{font-size:0.77rem;color:var(--text3);max-width:290px;margin:0 auto;line-height:1.65;}
+
+/* NOTICE */
+.notice{background:var(--yellow-bg);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:8px 12px;font-size:0.72rem;color:var(--yellow);line-height:1.6;}
+
+.scrollable{overflow-x:auto;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px;}
+
+/* WELCOME OVERLAY */
+.guide-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:9999;}
+.guide-overlay.open{display:flex;}
+.guide-card{background:var(--bg2);border:1px solid var(--border2);border-radius:15px;padding:26px 28px;width:415px;max-width:92%;box-shadow:0 40px 100px rgba(0,0,0,0.7);animation:gfade .3s ease;}
+@keyframes gfade{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.g-header{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.g-logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#b794f4);display:flex;align-items:center;justify-content:center;font-size:15px;}
+.g-title{font-family:'Arial',sans-serif;font-weight:800;font-size:1.1rem;}
+.g-sub{font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;margin-top:1px;}
+.g-steps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px;}
+.g-step{display:flex;align-items:flex-start;gap:11px;}
+.g-num{width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:2px;background:rgba(124,106,247,0.15);border:1px solid rgba(124,106,247,0.35);font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--accent2);display:flex;align-items:center;justify-content:center;}
+.g-text{font-size:0.8rem;color:var(--text2);line-height:1.55;}
+.g-text strong{color:var(--text);font-weight:500;}
+.g-divider{height:1px;background:var(--border);margin:14px 0;}
+.g-note{font-size:0.71rem;color:var(--text3);line-height:1.6;}
+.g-footer{display:flex;justify-content:space-between;align-items:center;margin-top:18px;}
+.g-skip{font-size:0.71rem;color:var(--text3);cursor:pointer;font-family:'DM Mono',monospace;}
+.g-skip:hover{color:var(--text2);}
+.g-cta{padding:8px 20px;background:linear-gradient(135deg,var(--accent),#b794f4);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.83rem;cursor:pointer;transition:opacity 0.15s;}
+.g-cta:hover{opacity:0.88;}
+</style>
+</head>
+<body>
+
+<!-- WELCOME GUIDE -->
+<div class="guide-overlay" id="guideOverlay">
+  <div class="guide-card">
+    <div class="g-header">
+      <div class="g-logo">⚡</div>
+      <div><div class="g-title">Welcome to Asset Optimizer</div><div class="g-sub">Reduce Stress with Compress · v2.0</div></div>
+    </div>
+    <div class="g-steps">
+      <div class="g-step"><div class="g-num">1</div><div class="g-text"><strong>Choose a mode</strong> — full project ZIP, single image, or single video compression.</div></div>
+      <div class="g-step"><div class="g-num">2</div><div class="g-text"><strong>Upload your file</strong> — drag &amp; drop or click. ZIP projects are fully scanned: every asset reference in your code is mapped automatically.</div></div>
+      <div class="g-step"><div class="g-num">3</div><div class="g-text"><strong>Tune settings</strong> — choose output format, quality (images) and bitrate (video). Defaults are already ideal.</div></div>
+      <div class="g-step"><div class="g-num">4</div><div class="g-text"><strong>Optimize &amp; download</strong> — for ZIP mode, only <em>used</em> assets are kept. Filenames are unchanged — your code needs zero edits.</div></div>
+    </div>
+    <div class="g-divider"></div>
+    <div class="g-note">🔒 Everything runs entirely in your browser. No files are uploaded to any server.</div>
+    <div class="g-footer">
+      <span class="g-skip" id="gSkip">Don't show again</span>
+      <button class="g-cta" id="gGotIt">Let's go →</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div><div class="logo-text">Asset Optimizer</div><div class="logo-sub">Reduce Stress with Compress</div></div>
+  </div>
+  <div class="header-right">
+    <button class="guide-btn" id="openGuide">? how to use</button>
+    <span class="version">v2.0</span>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+  <aside class="sidebar">
+
+    <!-- Mode switcher -->
+    <div>
+      <div class="sec-head">Mode</div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="modeZip"   onclick="switchMode('zip')">📦 Project ZIP</button>
+        <button class="mode-tab"        id="modeImg"   onclick="switchMode('img')">🖼 Image</button>
+        <button class="mode-tab"        id="modeVid"   onclick="switchMode('vid')">🎬 Video</button>
+      </div>
+    </div>
+
+    <!-- ZIP pane -->
+    <div id="paneZip">
+      <div class="sec-head">Upload project</div>
+      <div class="upload-zone" id="zipZone">
+        <input type="file" id="zipInput" accept=".zip">
+        <div class="uz-icon">📦</div>
+        <div class="uz-title" id="zipTitle">Drop your .zip project</div>
+        <div class="uz-sub"   id="zipSub">Upload entire project as ZIP. Code is scanned, assets detected &amp; optimized.</div>
+      </div>
+    </div>
+
+    <!-- Image pane -->
+    <div id="paneImg" style="display:none">
+      <div class="sec-head">Upload image</div>
+      <div class="upload-zone" id="imgZone">
+        <input type="file" id="imgInput" accept="image/png,image/jpeg,image/webp,image/gif">
+        <div class="uz-icon">🖼</div>
+        <div class="uz-title" id="imgTitle">Drop an image file</div>
+        <div class="uz-sub"   id="imgSub">PNG, JPG, WEBP, GIF supported.</div>
+      </div>
+      <button class="run-btn" id="imgRunBtn" disabled style="margin-top:9px">⚡ Compress Image</button>
+      <div class="single-result" id="imgResult">
+        <div class="sr-row"><span class="sr-label">Original</span><span class="sr-val" id="iOrig">—</span></div>
+        <div class="sr-row"><span class="sr-label">Compressed</span><span class="sr-val" id="iNew">—</span></div>
+        <div class="sr-row"><span class="sr-label">Saved</span><span class="sr-val" id="iSaved" style="color:var(--green)">—</span></div>
+        <div class="sr-row"><span class="sr-label">Format</span><span class="sr-val" id="iFmt">—</span></div>
+      </div>
+      <button class="single-dl-btn" id="imgDlBtn">↓ Download Compressed Image</button>
+    </div>
+
+    <!-- Video pane -->
+    <div id="paneVid" style="display:none">
+      <div class="sec-head">Upload video</div>
+      <div class="upload-zone" id="vidZone">
+        <input type="file" id="vidInput" accept="video/*">
+        <div class="uz-icon">🎬</div>
+        <div class="uz-title" id="vidTitle">Drop a video file</div>
+        <div class="uz-sub"   id="vidSub">MP4, MOV, WebM supported. Chrome &amp; Edge recommended.</div>
+      </div>
+      <button class="run-btn" id="vidRunBtn" disabled style="margin-top:9px">⚡ Compress Video</button>
+      <div class="single-result" id="vidResult">
+        <div class="sr-row"><span class="sr-label">Original</span><span class="sr-val" id="vOrig">—</span></div>
+        <div class="sr-row"><span class="sr-label">Compressed</span><span class="sr-val" id="vNew">—</span></div>
+        <div class="sr-row"><span class="sr-label">Saved</span><span class="sr-val" id="vSaved" style="color:var(--green)">—</span></div>
+        <div class="sr-row"><span class="sr-label">Codec</span><span class="sr-val" id="vCodec">—</span></div>
+        <div class="sr-row"><span class="sr-label">Duration</span><span class="sr-val" id="vDur">—</span></div>
+      </div>
+      <button class="single-dl-btn" id="vidDlBtn">↓ Download Compressed Video</button>
+    </div>
+
+    <!-- Image settings (hidden in video-only mode) -->
+    <div id="settingsImg">
+      <div class="sec-head">Image settings</div>
+      <div class="settings-block">
+        <div class="setting-row">
+          <div class="setting-label">Format <span id="fmtLbl">WebP</span></div>
+          <select id="imgFmt" onchange="document.getElementById('fmtLbl').textContent=this.options[this.selectedIndex].text.split(' —')[0]">
+            <option value="webp">WebP — best compression</option>
+            <option value="jpeg">JPEG — universal</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">Quality <span id="qualLbl">92%</span></div>
+          <div class="slider-track">
+            <input type="range" id="quality" min="70" max="100" value="92" step="1"
+              oninput="qualOut.textContent=this.value;qualLbl.textContent=this.value+'%'">
+            <span class="slider-val" id="qualOut">92</span>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">Max dimension <span id="dimLbl">1920px</span></div>
+          <select id="maxDim" onchange="document.getElementById('dimLbl').textContent=this.options[this.selectedIndex].text.split(' —')[1]||'None'">
+            <option value="0">No resize</option>
+            <option value="3840">4K — 3840px</option>
+            <option value="1920" selected>FHD — 1920px</option>
+            <option value="1280">HD — 1280px</option>
+            <option value="800">Web — 800px</option>
+          </select>
+        </div>
+        <div class="setting-row" id="scopeRow">
+          <div class="setting-label">ZIP scope <span id="scopeLbl">Used only</span></div>
+          <select id="scope" onchange="document.getElementById('scopeLbl').textContent=this.selectedIndex===0?'Used only':'All images'">
+            <option value="used">Referenced assets only</option>
+            <option value="all">All image assets</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video settings -->
+    <div id="settingsVid">
+      <div class="sec-head">Video settings</div>
+      <div class="settings-block">
+        <div class="setting-row">
+          <div class="setting-label">Bitrate <span id="vbrLbl">2 Mbps</span></div>
+          <select id="vidBitrate" onchange="document.getElementById('vbrLbl').textContent=this.options[this.selectedIndex].text.split(' —')[0]">
+            <option value="8000000">8 Mbps — near lossless</option>
+            <option value="4000000">4 Mbps — high quality</option>
+            <option value="2000000" selected>2 Mbps — balanced</option>
+            <option value="1000000">1 Mbps — smaller file</option>
+            <option value="500000">0.5 Mbps — web lite</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">Codec</div>
+          <select id="vidCodecSel">
+            <option value="webm">WebM / VP9</option>
+            <option value="mp4">MP4 / H.264</option>
+          </select>
+        </div>
+        <div style="font-size:0.66rem;color:var(--text3);line-height:1.6;margin-top:2px">
+          MediaRecorder API. Chrome &amp; Edge recommended. Time ≈ video duration.
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="progressSection" style="display:none">
+      <div class="sec-head">Progress</div>
+      <div class="progress-wrap">
+        <div class="progress-label" id="progressLabel">Scanning…</div>
+        <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBar" style="width:0%"></div></div>
+        <div class="progress-text"  id="progressText">0 / 0</div>
+      </div>
+    </div>
+
+    <!-- ZIP summary -->
+    <div id="summarySection" style="display:none">
+      <div class="sec-head">Summary</div>
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-val" id="mTotal">—</div><div class="metric-lbl">total assets</div></div>
+        <div class="metric-card"><div class="metric-val" id="mUsed">—</div><div class="metric-lbl">used</div></div>
+        <div class="metric-card"><div class="metric-val green" id="mSaved">—</div><div class="metric-lbl">saved</div></div>
+      </div>
+      <div style="margin-top:6px" class="metrics-row">
+        <div class="metric-card"><div class="metric-val" id="mOrig">—</div><div class="metric-lbl">before</div></div>
+        <div class="metric-card"><div class="metric-val" id="mAfter">—</div><div class="metric-lbl">after</div></div>
+        <div class="metric-card"><div class="metric-val green" id="mPct">—</div><div class="metric-lbl">reduction</div></div>
+      </div>
+    </div>
+
+    <!-- ZIP actions -->
+    <div id="zipActions">
+      <button class="run-btn" id="runBtn" disabled>⚡ Analyze &amp; Optimize</button>
+      <div id="dlSection" style="display:none;margin-top:9px">
+        <button class="dl-btn" id="dlBtn">↓ Download Optimized ZIP</button>
+        <div id="dlNote" style="display:none;margin-top:6px;font-size:0.67rem;color:var(--green);font-family:'DM Mono',monospace"></div>
+        <div style="margin-top:5px;font-size:0.66rem;color:var(--text3)">Only used assets included. Filenames unchanged. Zero code edits needed.</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN PANEL -->
+  <main class="panel">
+
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">🗂️</div>
+      <div class="empty-title">Upload your project ZIP to begin</div>
+      <div class="empty-sub">Asset Optimizer scans every source file, maps asset references in code, then compresses images &amp; videos — filenames stay identical so your project just works.</div>
+    </div>
+
+    <div id="singlePanel" style="display:none" class="empty-state">
+      <div class="empty-icon" id="singleIcon">🖼</div>
+      <div class="empty-title" id="singleTitle">Upload an image to compress</div>
+      <div class="empty-sub"   id="singleSub">Select a file on the left and hit Compress.</div>
+    </div>
+
+    <div id="resultsArea" style="display:none">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('assets')">Assets</button>
+        <button class="tab"        onclick="switchTab('tree')">File Tree</button>
+        <button class="tab"        onclick="switchTab('refs')">Code References</button>
+        <button class="tab"        onclick="switchTab('video')">Video Results</button>
+      </div>
+      <div class="tab-panel active" id="tab-assets">
+        <div class="scrollable">
+          <table class="asset-table">
+            <thead><tr><th>Asset path</th><th>Type</th><th>Status</th><th>Original</th><th>Optimized</th><th>Saved</th></tr></thead>
+            <tbody id="assetBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-tree"><div class="tree" id="treeView"></div></div>
+      <div class="tab-panel" id="tab-refs"><div id="refsView"></div></div>
+      <div class="tab-panel" id="tab-video"><div id="videoView"></div></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const IMG_EXTS = ['png','jpg','jpeg','webp','gif','avif','svg'];
+const VID_EXTS = ['mp4','mov','webm','avi','mkv','m4v','ogv'];
+const CODE_EXTS= ['html','htm','css','scss','sass','less','js','jsx','ts','tsx','vue','svelte','php','py','rb','json'];
+const IMG_C    = ['png','jpg','jpeg','webp','gif'];
+const VID_C    = ['mp4','mov','webm','avi','mkv','m4v','ogv'];
+
+// ── STATE ──────────────────────────────────────────────────
+let zipData={}, allFiles={}, assetMap={}, codeRefs={};
+let mode='zip';
+let sImgFile=null, sImgBlob=null;
+let sVidFile=null, sVidBlob=null, sVidExt='webm';
+
+// ── HELPERS ────────────────────────────────────────────────
+const fext = p => p.split('.').pop().toLowerCase();
+const bname= p => p.split('/').pop();
+const dname= p => p.includes('/')? p.split('/').slice(0,-1).join('/') :'';
+const fmt  = b => b>=1048576?(b/1048576).toFixed(1)+' MB':b>=1024?Math.round(b/1024)+' KB':b+' B';
+const sleep= ms=> new Promise(r=>setTimeout(r,ms));
+const setProg=(pct,lbl,sub)=>{
+  document.getElementById('progressBar').style.width=pct+'%';
+  document.getElementById('progressLabel').textContent=lbl;
+  document.getElementById('progressText').textContent=sub;
+};
+
+// ── GUIDE ──────────────────────────────────────────────────
+const overlay=document.getElementById('guideOverlay');
+document.getElementById('gGotIt').onclick =()=>overlay.classList.remove('open');
+document.getElementById('gSkip').onclick  =()=>{ overlay.classList.remove('open'); try{localStorage.setItem('afgSeen','1');}catch(e){} };
+document.getElementById('openGuide').onclick=()=>overlay.classList.add('open');
+window.addEventListener('load',()=>{
+  let seen=false; try{seen=!!localStorage.getItem('afgSeen');}catch(e){}
+  if(!seen) setTimeout(()=>overlay.classList.add('open'),350);
+});
+
+// ── MODE SWITCH ────────────────────────────────────────────
+function switchMode(m){
+  mode=m;
+  ['zip','img','vid'].forEach(k=>{
+    document.getElementById('mode'+k.charAt(0).toUpperCase()+k.slice(1)).classList.toggle('active',k===m);
+    document.getElementById('pane'+k.charAt(0).toUpperCase()+k.slice(1)).style.display=k===m?'':'none';
+  });
+  document.getElementById('scopeRow').style.display   = m==='zip'?'':'none';
+  document.getElementById('settingsImg').style.display= m==='vid'?'none':'';
+  document.getElementById('settingsVid').style.display= m==='img'?'none':'';
+  document.getElementById('zipActions').style.display = m==='zip'?'':'none';
+  document.getElementById('resultsArea').style.display='none';
+  document.getElementById('progressSection').style.display='none';
+  document.getElementById('summarySection').style.display='none';
+  if(m==='zip'){
+    document.getElementById('emptyState').style.display='';
+    document.getElementById('singlePanel').style.display='none';
+  } else {
+    document.getElementById('emptyState').style.display='none';
+    document.getElementById('singlePanel').style.display='';
+    document.getElementById('singleIcon').textContent= m==='img'?'🖼':'🎬';
+    document.getElementById('singleTitle').textContent=m==='img'?'Upload an image to compress':'Upload a video to compress';
+    document.getElementById('singleSub').textContent  =m==='img'?'Select an image on the left and hit Compress Image.':'Select a video on the left. Large files take time — stay on this tab.';
+  }
+}
+switchMode('zip');
+
+// ── ZIP UPLOAD ─────────────────────────────────────────────
+(()=>{
+  const zone=document.getElementById('zipZone'), inp=document.getElementById('zipInput');
+  zone.ondragover =e=>{e.preventDefault();zone.classList.add('drag');};
+  zone.ondragleave=()=>zone.classList.remove('drag');
+  zone.ondrop=e=>{e.preventDefault();zone.classList.remove('drag');if(e.dataTransfer.files[0])loadZip(e.dataTransfer.files[0]);};
+  inp.onchange=e=>{if(e.target.files[0])loadZip(e.target.files[0]);};
+})();
+
+async function loadZip(file){
+  if(!file.name.toLowerCase().endsWith('.zip')){alert('Please upload a .zip file.');return;}
+  document.getElementById('zipTitle').textContent=file.name;
+  document.getElementById('zipSub').textContent  =fmt(file.size)+' — ready to analyze';
+  zipData=await JSZip.loadAsync(file);
+  allFiles={};
+  for(const[path,entry]of Object.entries(zipData.files))
+    if(!entry.dir) allFiles[path]=await entry.async('uint8array');
+  document.getElementById('runBtn').disabled=false;
+  assetMap={}; codeRefs={};
+  document.getElementById('resultsArea').style.display='none';
+  document.getElementById('summarySection').style.display='none';
+  document.getElementById('dlSection').style.display='none';
+}
+
+// ── SINGLE IMAGE ───────────────────────────────────────────
+(()=>{
+  const zone=document.getElementById('imgZone'), inp=document.getElementById('imgInput');
+  zone.ondragover =e=>{e.preventDefault();zone.classList.add('drag');};
+  zone.ondragleave=()=>zone.classList.remove('drag');
+  zone.ondrop=e=>{e.preventDefault();zone.classList.remove('drag');if(e.dataTransfer.files[0])loadImg(e.dataTransfer.files[0]);};
+  inp.onchange=e=>{if(e.target.files[0])loadImg(e.target.files[0]);};
+})();
+
+function loadImg(file){
+  sImgFile=file; sImgBlob=null;
+  document.getElementById('imgTitle').textContent=file.name;
+  document.getElementById('imgSub').textContent  =fmt(file.size);
+  document.getElementById('imgRunBtn').disabled=false;
+  document.getElementById('imgResult').style.display='none';
+  document.getElementById('imgDlBtn').style.display='none';
+  document.getElementById('singlePanel').style.display='none';
+}
+
+document.getElementById('imgRunBtn').onclick=async()=>{
+  if(!sImgFile)return;
+  const btn=document.getElementById('imgRunBtn');
+  btn.disabled=true; btn.textContent='Compressing…';
+  try{
+    const arr=new Uint8Array(await sImgFile.arrayBuffer());
+    const r=await compressImage(arr,+document.getElementById('quality').value,document.getElementById('imgFmt').value,+document.getElementById('maxDim').value,fext(sImgFile.name));
+    sImgBlob=r.blob;
+    const saved=sImgFile.size-r.blob.size, pct=Math.round(saved/sImgFile.size*100);
+    document.getElementById('iOrig').textContent =fmt(sImgFile.size);
+    document.getElementById('iNew').textContent  =fmt(r.blob.size);
+    document.getElementById('iSaved').textContent=pct>0?`-${pct}% (${fmt(saved)})`:'~same size';
+    document.getElementById('iFmt').textContent  =r.outExt.toUpperCase();
+    document.getElementById('imgResult').style.display='';
+    const dl=document.getElementById('imgDlBtn');
+    dl.style.display='flex';
+    dl.onclick=()=>{ const url=URL.createObjectURL(sImgBlob),a=document.createElement('a'); a.href=url; a.download=sImgFile.name; a.click(); URL.revokeObjectURL(url); };
+  }catch(e){alert('Compression failed: '+e.message);}
+  btn.disabled=false; btn.textContent='⚡ Compress Image';
+};
+
+// ── SINGLE VIDEO ───────────────────────────────────────────
+(()=>{
+  const zone=document.getElementById('vidZone'), inp=document.getElementById('vidInput');
+  zone.ondragover =e=>{e.preventDefault();zone.classList.add('drag');};
+  zone.ondragleave=()=>zone.classList.remove('drag');
+  zone.ondrop=e=>{e.preventDefault();zone.classList.remove('drag');if(e.dataTransfer.files[0])loadVid(e.dataTransfer.files[0]);};
+  inp.onchange=e=>{if(e.target.files[0])loadVid(e.target.files[0]);};
+})();
+
+function loadVid(file){
+  sVidFile=file; sVidBlob=null;
+  document.getElementById('vidTitle').textContent=file.name;
+  document.getElementById('vidSub').textContent  =fmt(file.size)+' — ready';
+  document.getElementById('vidRunBtn').disabled=false;
+  document.getElementById('vidResult').style.display='none';
+  document.getElementById('vidDlBtn').style.display='none';
+  document.getElementById('singlePanel').style.display='none';
+}
+
+document.getElementById('vidRunBtn').onclick=async()=>{
+  if(!sVidFile)return;
+  const btn=document.getElementById('vidRunBtn');
+  btn.disabled=true; btn.textContent='Compressing… (stay on this tab)';
+  try{
+    const arr=new Uint8Array(await sVidFile.arrayBuffer());
+    const r=await compressVideo(arr,+document.getElementById('vidBitrate').value,document.getElementById('vidCodecSel').value,fext(sVidFile.name));
+    sVidBlob=r.blob; sVidExt=r.outExt;
+    const saved=sVidFile.size-r.blob.size, pct=Math.round(saved/sVidFile.size*100);
+    document.getElementById('vOrig').textContent =fmt(sVidFile.size);
+    document.getElementById('vNew').textContent  =fmt(r.blob.size);
+    document.getElementById('vSaved').textContent=pct>0?`-${pct}% (${fmt(saved)})`:'~same size';
+    document.getElementById('vCodec').textContent=r.outExt.toUpperCase()+(r.outExt==='webm'?' / VP9':' / H.264');
+    document.getElementById('vDur').textContent  =r.duration?r.duration.toFixed(1)+'s':'—';
+    document.getElementById('vidResult').style.display='';
+    const dl=document.getElementById('vidDlBtn');
+    dl.style.display='flex';
+    dl.onclick=()=>{ const url=URL.createObjectURL(sVidBlob),a=document.createElement('a'); a.href=url; a.download=sVidFile.name; a.click(); URL.revokeObjectURL(url); };
+  }catch(e){alert('Video compression failed:\n'+e.message+'\n\nTry Chrome/Edge, or switch to WebM/VP9 codec.');}
+  btn.disabled=false; btn.textContent='⚡ Compress Video';
+};
+
+// ── ZIP PIPELINE ───────────────────────────────────────────
+document.getElementById('runBtn').onclick=async()=>{
+  if(!Object.keys(allFiles).length)return;
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('progressSection').style.display='';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('resultsArea').style.display='none';
+
+  // Step 1 — catalog
+  setProg(5,'Scanning files…','Building index');
+  assetMap={}; codeRefs={};
+  const paths=Object.keys(allFiles);
+  for(const p of paths){
+    const e=fext(p);
+    if(IMG_EXTS.includes(e)||VID_EXTS.includes(e))
+      assetMap[p]={ext:e,size:allFiles[p].length,used:false,refs:[],blob:null,savedBytes:0,outExt:e};
+  }
+
+  // Step 2 — scan refs
+  setProg(20,'Scanning code references…','Reading source files');
+  const anames=Object.keys(assetMap).map(p=>({path:p,name:bname(p)}));
+  for(const p of paths){
+    if(!CODE_EXTS.includes(fext(p)))continue;
+    const text=new TextDecoder('utf-8',{fatal:false}).decode(allFiles[p]);
+    text.split('\n').forEach((line,idx)=>{
+      anames.forEach(({path:ap,name:an})=>{
+        if(line.includes(an)){
+          if(!codeRefs[ap])codeRefs[ap]=[];
+          codeRefs[ap].push({source:p,line:idx+1,snippet:line.trim().substring(0,80)});
+          assetMap[ap].used=true;
+          if(!assetMap[ap].refs.includes(p))assetMap[ap].refs.push(p);
+        }
+      });
+    });
+  }
+
+  // Step 3 — images
+  const scope=document.getElementById('scope').value;
+  const quality=+document.getElementById('quality').value;
+  const fmt2=document.getElementById('imgFmt').value;
+  const maxDim=+document.getElementById('maxDim').value;
+  const toImg=Object.entries(assetMap).filter(([,v])=>IMG_C.includes(v.ext)&&(scope==='all'||v.used));
+  for(let i=0;i<toImg.length;i++){
+    const[path,info]=toImg[i];
+    setProg(30+Math.round(i/Math.max(toImg.length,1)*32),'Compressing images…',`${i+1}/${toImg.length} — ${bname(path)}`);
+    try{
+      const r=await compressImage(allFiles[path],quality,fmt2,maxDim,info.ext);
+      assetMap[path].blob=r.blob; assetMap[path].savedBytes=info.size-r.blob.size; assetMap[path].outExt=r.outExt;
+    }catch(e){}
+    await sleep(0);
+  }
+
+  // Step 4 — videos
+  const vbr=+document.getElementById('vidBitrate').value;
+  const vfmt=document.getElementById('vidCodecSel').value;
+  const toVid=Object.entries(assetMap).filter(([,v])=>VID_C.includes(v.ext)&&v.used);
+  for(let i=0;i<toVid.length;i++){
+    const[path,info]=toVid[i];
+    setProg(62+Math.round(i/Math.max(toVid.length,1)*28),'Compressing videos…',`${i+1}/${toVid.length} — ${bname(path)}`);
+    try{
+      const r=await compressVideo(allFiles[path],vbr,vfmt,info.ext);
+      if(r&&r.blob){
+        if(r.blob.size<info.size){ assetMap[path].blob=r.blob; assetMap[path].savedBytes=info.size-r.blob.size; assetMap[path].outExt=r.outExt; assetMap[path].vComp=true; }
+        else{ assetMap[path].vComp=true; assetMap[path].vNoSmaller=true; }
+      }
+    }catch(e){ assetMap[path].vErr=e.message||'failed'; }
+    await sleep(0);
+  }
+
+  setProg(95,'Building results…','Almost done'); await sleep(50);
+  renderAll();
+  setProg(100,'Complete!',`${toImg.length} images · ${toVid.length} videos`);
+
+  const tot=Object.keys(assetMap).length, used=Object.values(assetMap).filter(v=>v.used).length;
+  const saved=Object.values(assetMap).reduce((s,v)=>s+Math.max(0,v.savedBytes),0);
+  const orig=[...toImg,...toVid].reduce((s,[,v])=>s+v.size,0);
+  const pct=orig>0?Math.round(saved/orig*100):0;
+  document.getElementById('mTotal').textContent=tot;
+  document.getElementById('mUsed').textContent =used;
+  document.getElementById('mSaved').textContent=fmt(saved);
+  document.getElementById('mOrig').textContent =fmt(orig);
+  document.getElementById('mAfter').textContent=fmt(orig-saved);
+  document.getElementById('mPct').textContent  =pct+'%';
+  document.getElementById('summarySection').style.display='';
+  document.getElementById('dlSection').style.display='';
+  document.getElementById('resultsArea').style.display='';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('runBtn').disabled=false;
+};
+
+// ── IMAGE COMPRESSION ──────────────────────────────────────
+// BROWSER RULES:
+//  - JPEG: quality param works perfectly (0.0–1.0)
+//  - WebP:  quality param works perfectly (0.0–1.0)
+//  - PNG:   lossless always — quality param is IGNORED by all browsers
+//           canvas.toBlob('image/png', quality) silently ignores quality
+//  FIX: For PNG input with "keep original", we dual-encode as PNG + WebP
+//       and return whichever is smaller. For JPG/JPEG we always use image/jpeg.
+//       If result is bigger than original (already optimised file) we return original.
+function compressImage(u8,quality,format,maxDim,origExt){
+  return new Promise((res,rej)=>{
+    const origBlob=new Blob([u8]);
+    const url=URL.createObjectURL(origBlob), img=new Image();
+    img.onload=()=>{
+      let w=img.naturalWidth, h=img.naturalHeight;
+      const needsResize = maxDim>0&&(w>maxDim||h>maxDim);
+      if(needsResize){
+        if(w>=h){h=Math.round(h*maxDim/w);w=maxDim;}
+        else{w=Math.round(w*maxDim/h);h=maxDim;}
+      }
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      const ctx=c.getContext('2d');
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality='high';
+      ctx.drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+
+      const q=quality/100; // always 0.0–1.0
+
+      // Helper: resolve with smaller-than-original blob, or original if not smaller
+      const pick=(blob,outExt)=>{
+        if(blob && (!needsResize ? blob.size<u8.length : true)){
+          res({blob,outExt});
+        } else {
+          res({blob:origBlob, outExt:origExt}); // original unchanged
+        }
+      };
+
+      if(format==='webp'){
+        c.toBlob(b=>pick(b,'webp'),'image/webp',q);
+
+      } else if(format==='jpeg'){
+        c.toBlob(b=>pick(b,'jpg'),'image/jpeg',q);
+
+      } else if(format==='png'){
+        // PNG ignores quality. Encode as-is (resize still helps if needed).
+        c.toBlob(b=>pick(b,'png'),'image/png');
+
+      } else {
+        // "Keep original" — smart per-format handling
+        if(origExt==='jpg'||origExt==='jpeg'){
+          // JPEG → re-encode JPEG with quality
+          c.toBlob(b=>pick(b,'jpg'),'image/jpeg',q);
+
+        } else if(origExt==='webp'){
+          // WebP → re-encode WebP with quality
+          c.toBlob(b=>pick(b,'webp'),'image/webp',q);
+
+        } else if(origExt==='png'){
+          // PNG is lossless — try PNG re-encode AND WebP, pick smallest
+          let pngDone=false, webpDone=false, pngB=null, webpB=null;
+          const tryResolve=()=>{
+            if(!pngDone||!webpDone) return;
+            const opts=[
+              pngB  && {blob:pngB,  outExt:'png'},
+              webpB && {blob:webpB, outExt:'webp'},
+            ].filter(x=>x&&x.blob&&x.blob.size<u8.length)
+             .sort((a,b)=>a.blob.size-b.blob.size);
+            if(opts.length>0) res(opts[0]);
+            else res({blob:origBlob,outExt:'png'}); // already optimal
+          };
+          c.toBlob(b=>{pngB=b;pngDone=true;tryResolve();},'image/png');
+          c.toBlob(b=>{webpB=b;webpDone=true;tryResolve();},'image/webp',q);
+
+        } else if(origExt==='gif'){
+          // GIF: canvas can't encode animated GIF — return original
+          res({blob:origBlob,outExt:'gif'});
+
+        } else {
+          // fallback
+          c.toBlob(b=>pick(b,'jpg'),'image/jpeg',q);
+        }
+      }
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('Image load failed'));};
+    img.src=url;
+  });
+}
+
+// ── VIDEO COMPRESSION ──────────────────────────────────────
+function compressVideo(u8,bitrate,format,origExt){
+  return new Promise((resolve,reject)=>{
+    const mimes=format==='webm'
+      ?['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']
+      :['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9','video/webm'];
+    const mime=mimes.find(m=>{try{return MediaRecorder.isTypeSupported(m);}catch(e){return false;}});
+    if(!mime){reject(new Error('No supported video codec. Use Chrome/Edge, or switch to WebM/VP9.'));return;}
+    const outExt=mime.startsWith('video/mp4')?'mp4':'webm';
+    const srcUrl=URL.createObjectURL(new Blob([u8]));
+    const video=document.createElement('video'); video.muted=true; video.src=srcUrl;
+    video.onloadedmetadata=()=>{
+      const w=video.videoWidth||1280,h=video.videoHeight||720;
+      const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      const ctx=canvas.getContext('2d'), stream=canvas.captureStream(30);
+      try{
+        const ac=new AudioContext(),src2=ac.createMediaElementSource(video),dst=ac.createMediaStreamDestination();
+        src2.connect(dst); src2.connect(ac.destination);
+        dst.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+      }catch(e){}
+      const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:bitrate}), chunks=[];
+      rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+      rec.onstop=()=>{URL.revokeObjectURL(srcUrl);resolve({blob:new Blob(chunks,{type:mime}),outExt,duration:video.duration});};
+      rec.onerror=e=>{URL.revokeObjectURL(srcUrl);reject(e.error||new Error('Recorder error'));};
+      rec.start(200); video.currentTime=0; video.play().catch(()=>{});
+      const draw=()=>{
+        if(video.ended||(video.paused&&video.currentTime>=video.duration-0.05)){if(rec.state==='recording')rec.stop();return;}
+        ctx.drawImage(video,0,0,w,h); requestAnimationFrame(draw);
+      };
+      video.onplay=draw; video.onended=()=>{if(rec.state==='recording')rec.stop();};
+      setTimeout(()=>{if(rec.state==='recording')rec.stop();},(((video.duration||120)+15)*1000));
+    };
+    video.onerror=()=>{URL.revokeObjectURL(srcUrl);reject(new Error('Video decode failed'));};
+    video.load();
+  });
+}
+
+// ── RENDER RESULTS ─────────────────────────────────────────
+function renderAll(){ renderAssets(); renderTree(); renderRefs(); renderVideo(); }
+
+function switchTab(name){
+  const names=['assets','tree','refs','video'];
+  document.querySelectorAll('.tabs .tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));
+}
+
+function renderAssets(){
+  const tbody=document.getElementById('assetBody'); tbody.innerHTML='';
+  const entries=Object.entries(assetMap).sort((a,b)=>{
+    if(a[1].used!==b[1].used)return a[1].used?-1:1;
+    return b[1].size-a[1].size;
+  });
+  for(const[path,info]of entries){
+    const isI=IMG_C.includes(info.ext), isV=VID_EXTS.includes(info.ext);
+    const tc=isI?'badge-img':isV?'badge-vid':'badge-other';
+    const sc=info.used?'badge-used':'badge-unused';
+    const pct=info.size>0?Math.round(Math.max(0,info.savedBytes)/info.size*100):0;
+    let save='—';
+    if(info.blob&&!isV) save=`<span class="save-chip ${pct>5?'':'warn'}">${pct>0?'-'+pct+'%':'~same'}</span>`;
+    else if(info.blob&&isV) save=info.vNoSmaller?`<span class="save-chip none">already optimal</span>`:`<span class="save-chip ${pct>5?'':'warn'}">${pct>0?'-'+pct+'%':'~same'}</span>`;
+    else if(isV) save=info.vErr?`<span class="save-chip none" title="${info.vErr}">codec unsupported</span>`:info.used?`<span class="save-chip warn">not processed</span>`:`<span class="save-chip none">unused</span>`;
+    const dp=dname(path),fn=bname(path);
+    tbody.innerHTML+=`<tr>
+      <td><span class="path-code">${dp?dp+'/':''}<span class="fn">${fn}</span></span></td>
+      <td><span class="badge ${tc}">${info.ext.toUpperCase()}</span></td>
+      <td><span class="badge ${sc}">${info.used?'Used':'Unused'}</span>${info.refs.length?`<span style="font-size:0.63rem;color:var(--text3);margin-left:4px">${info.refs.length} ref${info.refs.length>1?'s':''}</span>`:''}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:0.72rem">${fmt(info.size)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:0.72rem">${info.blob?fmt(info.blob.size):'—'}</td>
+      <td>${save}</td>
+    </tr>`;
+  }
+}
+
+function renderTree(){
+  const tree={};
+  Object.keys(allFiles).forEach(path=>{
+    const parts=path.split('/'); let node=tree;
+    parts.forEach((p,i)=>{if(!node[p])node[p]=i===parts.length-1?null:{};if(i<parts.length-1)node=node[p];});
+  });
+  document.getElementById('treeView').innerHTML=buildTree(tree,'');
+}
+function buildTree(node,prefix){
+  let html='';
+  const entries=Object.entries(node).sort(([a,av],[b,bv])=>{
+    if((av===null)!==(bv===null))return av===null?1:-1;
+    return a.localeCompare(b);
+  });
+  for(const[name,children]of entries){
+    const fp=prefix?prefix+'/'+name:name;
+    if(children===null){
+      const e=fext(name),info=assetMap[fp];
+      const isA=IMG_EXTS.includes(e)||VID_EXTS.includes(e),isU=info&&!info.used;
+      const pct=info&&info.blob?Math.round(Math.max(0,info.savedBytes)/info.size*100):0;
+      let ex='';
+      if(info&&info.blob&&pct>0)ex=`<span style="color:var(--green);margin-left:7px">-${pct}%</span>`;
+      else if(info&&VID_EXTS.includes(e)&&info.vErr)ex=`<span style="color:var(--text3);margin-left:7px">unsupported</span>`;
+      else if(info&&VID_EXTS.includes(e))ex=`<span style="color:var(--pink);margin-left:7px">video</span>`;
+      if(isU)ex+=`<span style="color:var(--text3);margin-left:7px">unused</span>`;
+      html+=`<div class="tree-file ${isA?'is-asset':''} ${isU?'unused':''}"><span class="tree-dot">○</span>${name}${ex}</div>`;
+    }else{
+      html+=`<div class="tree-folder"><span class="tree-dot">▸</span>${name}/</div>`;
+      html+=`<div class="tree-indent">${buildTree(children,fp)}</div>`;
+    }
+  }
+  return html;
+}
+
+function renderRefs(){
+  const view=document.getElementById('refsView'),entries=Object.entries(codeRefs);
+  if(!entries.length){view.innerHTML=`<div class="empty-state" style="padding:2rem"><div class="empty-icon">🔍</div><div class="empty-title">No code references found</div><div class="empty-sub">Assets may be loaded dynamically, or check that your code file extensions are supported.</div></div>`;return;}
+  view.innerHTML=entries.map(([ap,refs])=>{
+    const info=assetMap[ap];
+    const saved=info&&info.blob?`<span class="save-chip" style="margin-left:6px">-${Math.round(Math.max(0,info.savedBytes)/info.size*100)}%</span>`:'';
+    const items=refs.slice(0,10).map(r=>`<div class="ref-item"><span class="ref-src">${r.source}</span><span class="ref-ln">L${r.line}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${r.snippet}</span></div>`).join('');
+    const more=refs.length>10?`<div style="font-size:0.67rem;color:var(--text3);padding:4px 9px">+${refs.length-10} more</div>`:'';
+    return `<div class="ref-block"><div class="ref-asset-name">${bname(ap)} ${saved}</div><div class="ref-path">${ap}</div><div class="ref-list">${items}${more}</div></div>`;
+  }).join('');
+}
+
+function renderVideo(){
+  const videos=Object.entries(assetMap).filter(([,v])=>VID_EXTS.includes(v.ext));
+  const view=document.getElementById('videoView');
+  if(!videos.length){view.innerHTML=`<div class="empty-state" style="padding:2rem"><div class="empty-icon">🎬</div><div class="empty-title">No video files detected</div><div class="empty-sub">Your project has no MP4, MOV, WebM or other video assets.</div></div>`;return;}
+  const rows=videos.map(([p,v])=>{
+    const pct=v.blob?Math.round(Math.max(0,v.savedBytes)/v.size*100):0;
+    let sc,oc;
+    if(v.blob&&!v.vNoSmaller){sc=`<span class="save-chip">${pct>0?'-'+pct+'%':'~same'}</span>`;oc=fmt(v.blob.size);}
+    else if(v.vNoSmaller){sc=`<span class="save-chip none">already optimal</span>`;oc=fmt(v.blob.size);}
+    else if(v.vErr){sc=`<span class="save-chip none" title="${v.vErr}">codec unsupported</span>`;oc='—';}
+    else if(!v.used){sc=`<span class="save-chip none">skipped (unused)</span>`;oc='—';}
+    else{sc=`<span class="save-chip warn">not processed</span>`;oc='—';}
+    return `<tr><td><span class="path-code">${p}</span></td><td><span class="badge badge-vid">${v.ext.toUpperCase()}</span></td><td><span class="badge ${v.used?'badge-used':'badge-unused'}">${v.used?'Used':'Unused'}</span></td><td style="font-family:'DM Mono',monospace;font-size:0.72rem">${fmt(v.size)}</td><td style="font-family:'DM Mono',monospace;font-size:0.72rem">${oc}</td><td>${sc}</td></tr>`;
+  }).join('');
+  const failed=videos.filter(([,v])=>v.vErr||(!v.blob&&v.used));
+  const fb=failed.length?`<div class="notice" style="margin:1rem 0">⚠️ ${failed.length} video(s) could not be compressed in-browser. Use the FFmpeg commands below as fallback.</div>
+  <div class="sec-head" style="margin-top:1rem">FFmpeg fallback</div>
+  <div style="display:flex;flex-direction:column;gap:8px">${[
+    ['MP4 → H.264 near-lossless','ffmpeg -i input.mp4 -c:v libx264 -crf 18 -preset slow -c:a aac output.mp4'],
+    ['MP4 → H.265 (50% smaller)','ffmpeg -i input.mp4 -c:v libx265 -crf 22 -preset slow -c:a aac output.mp4'],
+    ['Any → WebM/VP9','ffmpeg -i input.mp4 -c:v libvpx-vp9 -crf 30 -b:v 0 -c:a libopus output.webm'],
+    ['Batch folder','for f in *.mp4; do ffmpeg -i "$f" -c:v libx264 -crf 18 -c:a aac "opt_$f"; done'],
+  ].map(([l,c])=>`<div class="ref-block"><div style="font-size:0.72rem;color:var(--text2);margin-bottom:4px">${l}</div><div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--accent2);background:var(--bg3);padding:7px 9px;border-radius:6px;word-break:break-all">${c}</div></div>`).join('')}</div>`:'';
+  view.innerHTML=`<div class="sec-head">Video results</div><div class="scrollable" style="margin-bottom:1rem"><table class="asset-table"><thead><tr><th>Path</th><th>Format</th><th>Status</th><th>Original</th><th>Compressed</th><th>Saved</th></tr></thead><tbody>${rows}</tbody></table></div>${fb}`;
+}
+
+// ── DOWNLOAD ZIP ───────────────────────────────────────────
+document.getElementById('dlBtn').onclick=async()=>{
+  const btn=document.getElementById('dlBtn');
+  btn.disabled=true; btn.textContent='Building ZIP…';
+  const outZip=new JSZip(); let inc=0,skip=0;
+  for(const[path,data]of Object.entries(allFiles)){
+    const info=assetMap[path];
+    if(info){
+      if(!info.used){skip++;continue;}
+      outZip.file(path,info.blob?await info.blob.arrayBuffer():data);
+      inc++;
+    }else{ outZip.file(path,data); }
+  }
+  const blob=await outZip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url; a.download='project-optimized.zip'; a.click(); URL.revokeObjectURL(url);
+  btn.textContent='↓ Download Optimized ZIP'; btn.disabled=false;
+  const note=document.getElementById('dlNote');
+  note.textContent=`✓ ${inc} assets included · ${skip} unused removed`;
+  note.style.display='';
+};
+</script>
+</body>
+</html>
